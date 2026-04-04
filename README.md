@@ -4,6 +4,18 @@ A collection of Irish road signs for studying for the Irish driving test.
 
 Each image filename is a description of the sign.
 
+## Anki Deck
+
+This repository can generate an Anki deck where the front of each card is the sign image and the back is the sign description derived from the filename.
+
+Build the deck with:
+
+```bash
+python3 scripts/build_anki_deck.py
+```
+
+The generated package is written to `dist/irish-road-signs.apkg`.
+
 ## Regulatory Signs
 
 | | | | |
