@@ -1,6 +1,7 @@
 name: Update Anki Deck
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "*.png"
@@ -13,6 +14,10 @@ on:
       - "*.png"
       - "scripts/build_anki_deck.py"
       - ".github/workflows/update-anki-deck.yml"
+
+concurrency:
+  group: update-anki-deck-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify-deck:
@@ -39,7 +44,7 @@ jobs:
         run: git diff --exit-code -- dist/irish-road-signs.apkg
 
   update-deck:
-    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,6 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,4 +76,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist/irish-road-signs.apkg
           git commit -m "Update generated Anki deck"
+          git pull --rebase origin main
+          python scripts/build_anki_deck.py
+          if ! git diff --quiet -- dist/irish-road-signs.apkg; then
+            git add dist/irish-road-signs.apkg
+            git commit --amend --no-edit
+          fi
           git push
