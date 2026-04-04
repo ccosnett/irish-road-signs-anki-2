@@ -8,6 +8,18 @@ Each image filename is a description of the sign.
 
 This repository can generate an Anki deck where the front of each card is the sign image and the back is the sign description derived from the filename.
 
+### Load the Deck in Anki
+
+1. Install Anki from [apps.ankiweb.net](https://apps.ankiweb.net/) if you do not already have it.
+2. Open Anki on your computer.
+3. In Anki, click `File` -> `Import`.
+4. Select `dist/irish-road-signs.apkg` from this repository.
+5. Confirm the import when Anki shows the deck preview.
+6. Open the imported `Irish Road Signs` deck.
+7. Start studying. Each card shows the sign image first, and the answer reveals the sign description.
+
+If you want the latest version of the deck package before importing, rebuild it first:
+
 Build the deck with:
 
 ```bash
