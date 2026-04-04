@@ -28,6 +28,31 @@ python3 scripts/build_anki_deck.py
 
 The generated package is written to `dist/irish-road-signs.apkg`.
 
+### Automatic Deck Updates
+
+This repository now updates the generated Anki deck automatically.
+
+- The GitHub Actions workflow at `.github/workflows/update-anki-deck.yml` rebuilds `dist/irish-road-signs.apkg` when sign images or the deck script change on `main`.
+- Pull requests that change sign images or the deck script also verify that the checked-in `.apkg` file is up to date.
+- The deck build is deterministic, so rebuilding the same inputs should produce the same `.apkg` binary.
+
+### Supported Image Files
+
+The deck builder currently includes tracked image files in the repository root with these extensions:
+
+- `.png`
+- `.svg`
+- `.jpg`
+- `.jpeg`
+
+### Adding a New Sign
+
+1. Add the image file to the repository root.
+2. Name the file with the sign description, using underscores between words, for example `mini_roundabout_ahead.svg`.
+3. Commit and push the image to `main`, or merge a pull request containing it.
+4. The workflow should rebuild `dist/irish-road-signs.apkg` automatically.
+5. If needed, you can still rebuild locally with `python3 scripts/build_anki_deck.py`.
+
 ## Regulatory Signs
 
 | | | | |
