@@ -1,0 +1,73 @@
+name: Update Anki Deck
+
+on:
+  pull_request:
+    paths:
+      - "*.png"
+      - "scripts/build_anki_deck.py"
+      - ".github/workflows/update-anki-deck.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "*.png"
+      - "scripts/build_anki_deck.py"
+      - ".github/workflows/update-anki-deck.yml"
+
+jobs:
+  verify-deck:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install genanki
+
+      - name: Rebuild deck
+        run: python scripts/build_anki_deck.py
+
+      - name: Ensure generated deck is up to date
+        run: git diff --exit-code -- dist/irish-road-signs.apkg
+
+  update-deck:
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install genanki
+
+      - name: Rebuild deck
+        run: python scripts/build_anki_deck.py
+
+      - name: Commit updated deck if needed
+        run: |
+          if git diff --quiet -- dist/irish-road-signs.apkg; then
+            echo "Deck already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/irish-road-signs.apkg
+          git commit -m "Update generated Anki deck"
+          git push

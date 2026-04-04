@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
+import json
 import re
+import sqlite3
+import tempfile
+import zipfile
 from pathlib import Path
 
 import genanki
@@ -15,6 +20,8 @@ OUTPUT_FILE = OUTPUT_DIR / "irish-road-signs.apkg"
 DECK_NAME = "Irish Road Signs"
 DECK_ID = 2054517318
 MODEL_ID = 1677345012
+BUILD_TIMESTAMP = 1.0
+ZIP_DATE_TIME = (2024, 1, 1, 0, 0, 0)
 
 
 def humanize_stem(stem: str) -> str:
@@ -95,10 +102,50 @@ def build_deck() -> tuple[genanki.Deck, list[str]]:
     return deck, media_files
 
 
+def write_deterministic_package(
+    deck: genanki.Deck, media_files: list[str], output_file: Path
+) -> None:
+    package = genanki.Package(deck, media_files=media_files)
+    db_fd, db_filename = tempfile.mkstemp()
+
+    try:
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        id_gen = itertools.count(int(BUILD_TIMESTAMP * 1000))
+        package.write_to_db(cursor, BUILD_TIMESTAMP, id_gen)
+        conn.commit()
+        conn.close()
+
+        media_json = {
+            idx: Path(path).name for idx, path in enumerate(media_files)
+        }
+
+        with zipfile.ZipFile(output_file, "w") as outzip:
+            collection_info = zipfile.ZipInfo("collection.anki2", date_time=ZIP_DATE_TIME)
+            collection_info.compress_type = zipfile.ZIP_STORED
+            with open(db_filename, "rb") as handle:
+                outzip.writestr(collection_info, handle.read())
+
+            media_info = zipfile.ZipInfo("media", date_time=ZIP_DATE_TIME)
+            media_info.compress_type = zipfile.ZIP_STORED
+            outzip.writestr(
+                media_info,
+                json.dumps(media_json, sort_keys=True, separators=(",", ":")).encode("utf-8"),
+            )
+
+            for idx, path in enumerate(media_files):
+                media_path = Path(path)
+                file_info = zipfile.ZipInfo(str(idx), date_time=ZIP_DATE_TIME)
+                file_info.compress_type = zipfile.ZIP_STORED
+                outzip.writestr(file_info, media_path.read_bytes())
+    finally:
+        Path(db_filename).unlink(missing_ok=True)
+
+
 def main() -> None:
     deck, media_files = build_deck()
     OUTPUT_DIR.mkdir(exist_ok=True)
-    genanki.Package(deck, media_files=media_files).write_to_file(str(OUTPUT_FILE))
+    write_deterministic_package(deck, media_files, OUTPUT_FILE)
     print(f"Wrote {OUTPUT_FILE}")
     print(f"Cards: {len(media_files)}")
 
