@@ -7,6 +7,7 @@ import itertools
 import json
 import re
 import sqlite3
+import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
@@ -22,6 +23,7 @@ DECK_ID = 2054517318
 MODEL_ID = 1677345012
 BUILD_TIMESTAMP = 1.0
 ZIP_DATE_TIME = (2024, 1, 1, 0, 0, 0)
+SUPPORTED_IMAGE_EXTENSIONS = (".png", ".svg", ".jpg", ".jpeg")
 
 
 def humanize_stem(stem: str) -> str:
@@ -37,6 +39,28 @@ def humanize_stem(stem: str) -> str:
 def guid_for_name(name: str) -> str:
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
     return digest[:10]
+
+
+def tracked_image_paths() -> list[Path]:
+    cmd = [
+        "git",
+        "ls-files",
+        "--",
+        *[f"*{ext}" for ext in SUPPORTED_IMAGE_EXTENSIONS],
+    ]
+    result = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    paths = []
+    for line in result.stdout.splitlines():
+        path = ROOT / line
+        if path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+            paths.append(path)
+    return sorted(paths)
 
 
 def build_deck() -> tuple[genanki.Deck, list[str]]:
@@ -86,7 +110,7 @@ def build_deck() -> tuple[genanki.Deck, list[str]]:
     deck = genanki.Deck(DECK_ID, DECK_NAME)
     media_files: list[str] = []
 
-    for image_path in sorted(ROOT.glob("*.png")):
+    for image_path in tracked_image_paths():
         description = humanize_stem(image_path.stem)
         note = genanki.Note(
             model=model,
